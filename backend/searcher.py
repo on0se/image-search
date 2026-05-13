@@ -11,7 +11,7 @@ def add_index(vector, index):
     index.add(vector)              # ベクトルをインデックスに登録
     return index
 
-def search(index, query_vector, imgs, top_k=10):
+def faiss_search(index, query_vector, top_k=10):
     """
     クエリベクトルに最も近い画像をTop-K件検索する
     返り値は検索結果のリストで中身は画像
@@ -22,8 +22,4 @@ def search(index, query_vector, imgs, top_k=10):
     # 検索実行: distances=距離のリスト, indices=インデックス番号のリスト
     distances, indices = index.search(query, top_k)
 
-    results = []
-    for rank, (idx, dist) in enumerate(zip(indices[0], distances[0]), start=1):
-        results.append(imgs[idx])
-
-    return results
+    return indices[0].tolist()
