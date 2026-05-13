@@ -13,7 +13,7 @@ function ResultScreen({handleModal, dbImages, searchResults, queryImage, setScre
   return (
     <div>
       <CloseButton targetScreen={"normal"} setScreen={setScreen}/>
-      <QueryImageCard Image={queryImage} handleModal={handleModal}/>\
+      <QueryImageCard Image={queryImage} handleModal={handleModal}/>
       <ImageGrid searchResults={searchResults} handleModal={handleModal} dbImages={dbImages}/>
     </div>
   );
@@ -202,11 +202,19 @@ export default function App() {
     // 写真のアップロード
     const files = Array.from(e.target.files)
     const newUrls = files.map(file => URL.createObjectURL(file));
+
     // ロード画面へ遷移
     setScreen("loading");
+
     // 画像データベース、画像ベクトルリスト、faissインデックスの更新
+    const formData = new FormData();
+    files.forEach(file => formData.append("files", file));
+    await fetch("http://localhost:8000/upload", {
+      method: "POST",
+      body: formData
+    })
     setDbImages(prev => [...prev, ...newUrls]);
-    await new Promise(r => setTimeout(r, 1000));
+
     // 通常画面へ遷移
     setScreen("normal");
   }
@@ -216,12 +224,21 @@ export default function App() {
     // クエリ写真のアップロード
     const file = e.target.files[0];
     const newUrl = URL.createObjectURL(file);
+
     // ロード画面へ遷移
     setScreen("loading");
+
     // クエリ画像の更新、検索、検索結果の更新
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch("http://localhost:8000/search", {
+      method: "POST",
+      body: formData
+    })
+    const data = await response.json()
     setQueryImage(newUrl);
-    await new Promise(r => setTimeout(r, 1000));
-    setSearchResults([0, 1]);
+    setSearchResults(data.results)
+
     // 結果画面へ遷移
     setScreen("results");
   }
