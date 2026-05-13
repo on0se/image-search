@@ -209,7 +209,7 @@ export default function App() {
     // 画像データベース、画像ベクトルリスト、faissインデックスの更新
     const formData = new FormData();
     files.forEach(file => formData.append("files", file));
-    await fetch("http://localhost:8000/upload", {
+    await fetch('http://localhost:8000/upload', {
       method: "POST",
       body: formData
     })
@@ -231,7 +231,7 @@ export default function App() {
     // クエリ画像の更新、検索、検索結果の更新
     const formData = new FormData();
     formData.append("file", file);
-    const response = await fetch("http://localhost:8000/search", {
+    const response = await fetch(`http://localhost:8000/search?topK=${topK}`, {
       method: "POST",
       body: formData
     })

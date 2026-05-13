@@ -45,7 +45,7 @@ async def upload(files: List[UploadFile] = File(...)):
     return {"count": add_count}
 
 @app.post("/search")
-async def search(topK: int = 10, file: UploadFile = File(...)):
+async def search(topK: int = 1, file: UploadFile = File(...)):
     """
     クエリ写真に似た写真を検索する
     引数: クエリ写真
