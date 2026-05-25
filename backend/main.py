@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from PIL import Image
@@ -16,36 +16,49 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# グローバル変数
-db_vectors = [] # 画像ベクトルのリスト
-index = None # faissインデックス
-uploaded_names = set() # 画像の名前管理
+# データベース
+class ImageDB:
+    def __init__(self):
+        self.vectors = [] # 画像ベクトルのリスト
+        self.index = None # faissインデックス
+        self.uploaded_names = set() # 画像の名前管理
+
+image_db = ImageDB()
+
+def get_db():
+    return image_db
 
 @app.post("/upload")
-async def upload(files: List[UploadFile] = File(...)):
+async def upload(
+    files: List[UploadFile] = File(...),
+    db: ImageDB = Depends(get_db) # Dependency Injection
+):
     """
     写真をデータベースにアップロードする
     引数: アップロードする写真
     処理: 写真ベクトルリスト、faissインデクスの更新
     返り値: アップロードした画像の枚数
     """
-    global db_vectors, index, uploaded_names
     add_count = 0
     
     for file in files:
         content = await file.read()
         name = file.filename
-        if name not in uploaded_names:
+        if name not in db.uploaded_names:
             vector = vectorize_image(Image.open(io.BytesIO(content)).convert("RGB"))
-            db_vectors.append(vector)
-            index = add_index(vector.reshape(1, -1), index)
-            uploaded_names.add(name)
+            db.vectors.append(vector)
+            db.index = add_index(vector.reshape(1, -1), db.index)
+            db.uploaded_names.add(name)
             add_count += 1
     
     return {"count": add_count}
 
 @app.post("/search")
-async def search(topK: int = 1, file: UploadFile = File(...)):
+async def search(
+    topK: int = 1,
+    file: UploadFile = File(...),
+    db: ImageDB = Depends(get_db) # Dependency Injection
+):
     """
     クエリ写真に似た写真を検索する
     引数: クエリ写真
@@ -54,5 +67,5 @@ async def search(topK: int = 1, file: UploadFile = File(...)):
     """
     content = await file.read()
     vector = vectorize_image(Image.open(io.BytesIO(content)).convert("RGB"))
-    results = faiss_search(index, vector, topK)
+    results = faiss_search(db.index, vector, topK)
     return {"results": results}
