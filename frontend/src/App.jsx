@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+const API_BASE_URL = "http://localhost:8000"
+
 function NormalScreen({topK, setTopK, handleFileUp, handleSearch, handleModal, dbImages}) {
   return (
     <div>
@@ -209,7 +211,7 @@ export default function App() {
     // 画像データベース、画像ベクトルリスト、faissインデックスの更新
     const formData = new FormData();
     files.forEach(file => formData.append("files", file));
-    await fetch('http://localhost:8000/upload', {
+    await fetch(`${API_BASE_URL}/upload`, {
       method: "POST",
       body: formData
     })
@@ -231,7 +233,7 @@ export default function App() {
     // クエリ画像の更新、検索、検索結果の更新
     const formData = new FormData();
     formData.append("file", file);
-    const response = await fetch(`http://localhost:8000/search?topK=${topK}`, {
+    const response = await fetch(`${API_BASE_URL}/search?topK=${topK}`, {
       method: "POST",
       body: formData
     })
