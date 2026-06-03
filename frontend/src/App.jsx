@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react'
 
 const API_BASE_URL = "http://localhost:8000"
 
@@ -8,7 +8,7 @@ function NormalScreen({topK, setTopK, handleFileUp, handleSearch, handleModal, d
       <UserControlPanel topK={topK} setTopK={setTopK} handleFileUp={handleFileUp} handleSearch={handleSearch}/>
       <ImageGrid handleModal={handleModal} dbImages={dbImages}/>
     </div>
-  );
+  )
 }
 
 function ResultScreen({handleModal, dbImages, searchResults, queryImage, setScreen}) {
@@ -18,7 +18,7 @@ function ResultScreen({handleModal, dbImages, searchResults, queryImage, setScre
       <QueryImageCard Image={queryImage} handleModal={handleModal}/>
       <ImageGrid searchResults={searchResults} handleModal={handleModal} dbImages={dbImages}/>
     </div>
-  );
+  )
 }
 
 function LoadingScreen() {
@@ -26,7 +26,7 @@ function LoadingScreen() {
     <div>
       <h1>現在ロード中です</h1>
     </div>
-  );
+  )
 }
 
 function ImageModal({expandImage, nextScreen, setScreen}) {
@@ -36,7 +36,7 @@ function ImageModal({expandImage, nextScreen, setScreen}) {
       <CloseButton targetScreen={nextScreen} setScreen={setScreen}/>
       <ExpandImageCard Image={expandImage}/>
     </div>
-  );
+  )
 }
 
 function UserControlPanel({topK, setTopK, handleFileUp, handleSearch}) {
@@ -51,7 +51,7 @@ function UserControlPanel({topK, setTopK, handleFileUp, handleSearch}) {
       <TopKSlider topK={topK} setTopK={setTopK} />
       <SearchButton handleSearch={handleSearch}/>
     </div>
-  );
+  )
 }
 
 function ImageGrid({searchResults, handleModal, dbImages}) {
@@ -61,9 +61,9 @@ function ImageGrid({searchResults, handleModal, dbImages}) {
   */
   // データベースがないときに検索をしても全て表示になる、その対策はあとでしろ。データベースにないなら検索できないとかね
   // searchResultsが空の時は全ての添え字が対象
-  let keys;
-  if (searchResults === undefined) keys = dbImages.map((_, i) => i);
-  else keys = searchResults;
+  let keys
+  if (searchResults === undefined) keys = dbImages.map((_, i) => i)
+  else keys = searchResults
 
   return (
     <div style={{
@@ -75,7 +75,7 @@ function ImageGrid({searchResults, handleModal, dbImages}) {
         <ImageCard key={key} Image={dbImages[key]} handleModal={handleModal}/>
       )}
     </div>
-  );
+  )
 }
 
 function CloseButton({targetScreen, setScreen}) {
@@ -88,7 +88,7 @@ function CloseButton({targetScreen, setScreen}) {
         right: 10,
       }}
     > X </button>
-  );
+  )
 }
 
 function UploadButton({handleFileUp}) {
@@ -131,7 +131,7 @@ function SearchButton({handleSearch}) {
         style={{ display: "none" }}
       />
     </label>
-  );
+  )
 }
 
 function TopKSlider({topK, setTopK}) {
@@ -146,7 +146,7 @@ function TopKSlider({topK, setTopK}) {
         onChange={e => setTopK(e.target.value)}
       />
     </div>
-  );
+  )
 }
 
 function ImageCard({Image, handleModal}) {
@@ -160,7 +160,7 @@ function ImageCard({Image, handleModal}) {
         objectFit: "cover",
       }}
     />
-  );
+  )
 }
 
 function ExpandImageCard({Image}) {
@@ -173,7 +173,7 @@ function ExpandImageCard({Image}) {
         objectFit: "contain",
       }}
     />
-  );
+  )
 }
 
 function QueryImageCard({Image, handleModal}) {
@@ -187,83 +187,88 @@ function QueryImageCard({Image, handleModal}) {
         objectFit: "cover",
       }}
     />
-  );
+  )
 }
 
 export default function App() {
-  const [dbImages, setDbImages] = useState([]); // uploadした写真
-  const [queryImage, setQueryImage] = useState(null); // クエリ画像
-  const [screen, setScreen] = useState("normal"); // 表示する画面(通常、結果、ロード、拡大写真)
+  const [dbImages, setDbImages] = useState([]) // uploadした写真
+  const [queryImage, setQueryImage] = useState(null) // クエリ画像
+  const [screen, setScreen] = useState("normal") // 表示する画面(通常、結果、ロード、拡大写真)
   const [searchResults, setSearchResults] = useState([]) // 検索結果
-  const [nextScreen, setNextScreen] = useState(null); // ロード画面の次、バツボタンの次の画面の情報
-  const [topK, setTopK] = useState(10); // 検索で表示する画像数
-  const [expandImage, setExpandImage] = useState(null); // 拡大している写真
+  const [nextScreen, setNextScreen] = useState(null) // ロード画面の次、バツボタンの次の画面の情報
+  const [topK, setTopK] = useState(10) // 検索で表示する画像数
+  const [expandImage, setExpandImage] = useState(null) // 拡大している写真
+  const dbImageNames = useRef(new Set()) // uploadした写真の名前
 
   // UploadButtonイベント
   async function handleFileUp(e) {
     // 写真のアップロード
     const files = Array.from(e.target.files)
-    const newUrls = files.map(file => URL.createObjectURL(file));
+    const newFiles = files.filter(file => !dbImageNames.current.has(file.name)) // 新しい写真のみ追加
+    if (newFiles.length === 0) return
+    const newUrls = newFiles.map(file => URL.createObjectURL(file))
 
     // ロード画面へ遷移
-    setScreen("loading");
+    setScreen("loading")
 
-    // 画像データベース、画像ベクトルリスト、faissインデックスの更新
-    const formData = new FormData();
-    files.forEach(file => formData.append("files", file));
+    // 画像データベース、画像ベクトルリスト、faissインデックス、名前setの更新
+    const formData = new FormData()
+    newFiles.forEach(file => formData.append("files", file))
     await fetch(`${API_BASE_URL}/upload`, {
       method: "POST",
       body: formData
     })
-    setDbImages(prev => [...prev, ...newUrls]);
+    setDbImages(prev => [...prev, ...newUrls])
+    newFiles.forEach(file => dbImageNames.current.add(file.name))
+
 
     // 通常画面へ遷移
-    setScreen("normal");
+    setScreen("normal")
   }
 
   // SearchButtonイベント
   async function handleSearch(e) {
     // クエリ写真のアップロード
-    const file = e.target.files[0];
-    const newUrl = URL.createObjectURL(file);
+    const file = e.target.files[0]
+    const newUrl = URL.createObjectURL(file)
 
     // ロード画面へ遷移
-    setScreen("loading");
+    setScreen("loading")
 
     // クエリ画像の更新、検索、検索結果の更新
-    const formData = new FormData();
-    formData.append("file", file);
+    const formData = new FormData()
+    formData.append("file", file)
     const response = await fetch(`${API_BASE_URL}/search?topK=${topK}`, {
       method: "POST",
       body: formData
     })
     const data = await response.json()
-    setQueryImage(newUrl);
+    setQueryImage(newUrl)
     setSearchResults(data.results)
 
     // 結果画面へ遷移
-    setScreen("results");
+    setScreen("results")
   }
 
   // 画像拡大イベント
   function handleModal(Image) {
-    setNextScreen(screen);
-    setExpandImage(Image);
-    setScreen("modal");
+    setNextScreen(screen)
+    setExpandImage(Image)
+    setScreen("modal")
   }
 
-  let content;
+  let content
   if (screen == "normal") {
-    content = <NormalScreen topK={topK} setTopK={setTopK} handleFileUp={handleFileUp} handleSearch={handleSearch} handleModal={handleModal} dbImages={dbImages}/>;
+    content = <NormalScreen topK={topK} setTopK={setTopK} handleFileUp={handleFileUp} handleSearch={handleSearch} handleModal={handleModal} dbImages={dbImages}/>
   }
   else if (screen == "results") {
-    content = <ResultScreen searchResults={searchResults} handleModal={handleModal} dbImages={dbImages} queryImage={queryImage} setScreen={setScreen}/>;
+    content = <ResultScreen searchResults={searchResults} handleModal={handleModal} dbImages={dbImages} queryImage={queryImage} setScreen={setScreen}/>
   }
   else if (screen == "loading") {
-    content = <LoadingScreen />;
+    content = <LoadingScreen />
   }
   else {
-    content = <ImageModal expandImage={expandImage} nextScreen={nextScreen} setScreen={setScreen}/>;
+    content = <ImageModal expandImage={expandImage} nextScreen={nextScreen} setScreen={setScreen}/>
   }
 
   return (

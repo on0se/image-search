@@ -21,7 +21,6 @@ class ImageDB:
     def __init__(self):
         self.vectors = [] # 画像ベクトルのリスト
         self.index = None # faissインデックス
-        self.uploaded_names = set() # 画像の名前管理
 
 image_db = ImageDB()
 
@@ -43,13 +42,10 @@ async def upload(
     
     for file in files:
         content = await file.read()
-        name = file.filename
-        if name not in db.uploaded_names:
-            vector = vectorize_image(Image.open(io.BytesIO(content)).convert("RGB"))
-            db.vectors.append(vector)
-            db.index = add_index(vector.reshape(1, -1), db.index)
-            db.uploaded_names.add(name)
-            add_count += 1
+        vector = vectorize_image(Image.open(io.BytesIO(content)).convert("RGB"))
+        db.vectors.append(vector)
+        db.index = add_index(vector.reshape(1, -1), db.index)
+        add_count += 1
     
     return {"count": add_count}
 
@@ -65,6 +61,7 @@ async def search(
     処理: 似た写真をfaissで検索する
     返り値: 似た写真の写真データベース上の添え字
     """
+    topK = min(topK, len(db.vectors))
     content = await file.read()
     vector = vectorize_image(Image.open(io.BytesIO(content)).convert("RGB"))
     results = faiss_search(db.index, vector, topK)
