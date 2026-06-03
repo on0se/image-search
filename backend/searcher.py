@@ -7,7 +7,8 @@ def add_index(vector, index):
     """
     dim = vector.shape[1]          # ベクトルの次元数（DINOv2 vitb14は768次元）
     if index is None:
-        index = faiss.IndexFlatL2(dim)
+        #index = faiss.IndexFlatL2(dim)
+        index = faiss.IndexHNSWFlat(dim, 32)
     index.add(vector)              # ベクトルをインデックスに登録
     return index
 
