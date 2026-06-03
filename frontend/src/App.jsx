@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { Skeleton } from '@chakra-ui/react'
 
 const API_BASE_URL = "http://localhost:8000"
 
@@ -150,16 +151,21 @@ function TopKSlider({topK, setTopK}) {
 }
 
 function ImageCard({Image, handleModal}) {
+  const [isLoaded, setIsLoaded] = useState(false) // 画像がロードされたか
+
   return (
-    <img 
-      src={Image}
-      onClick={() => handleModal(Image)}
-      style={{
-        width: "100%",
-        height: "100px",
-        objectFit: "cover",
-      }}
-    />
+    <Skeleton isLoaded={isLoaded} width="100%" height="100px">
+      <img 
+        src={Image}
+        onLoad={() => setIsLoaded(true)}
+        onClick={() => handleModal(Image)}
+        style={{
+          width: "100%",
+          height: "100px",
+          objectFit: "cover",
+        }}
+      />
+    </Skeleton>
   )
 }
 
