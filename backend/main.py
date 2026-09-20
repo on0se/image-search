@@ -29,18 +29,18 @@ class ImageRepository(abc.ABC):
 # メモリで管理するデータベース
 class InMemoryImageRepository(ImageRepository):
     def __init__(self):
-        self.vectors = [] # 画像ベクトルのリスト
         self.index = None # faissインデックス
     
     def add(self, vector) -> None:
-        self.vectors.append(vector)
         self.index = add_index(vector.reshape(1, -1), self.index)
     
     def search(self, query_vector, topk) -> list:
         return faiss_search(self.index, query_vector, topk)
 
     def count(self) -> int:
-        return len(self.vectors)
+        if self.index is None:
+            return 0
+        return self.index.ntotal
 
 # サーバー起動時にRepositoryを作り、appに紐づける
 @asynccontextmanager
