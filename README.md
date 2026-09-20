@@ -1,4 +1,4 @@
-# image-search
+# PhotoFinder
 
 画像をクエリにして、視覚的に似た画像を検索するアプリケーション。
 DINOv2 で特徴量を抽出し、FAISS(HNSW) で近似最近傍探索する。
