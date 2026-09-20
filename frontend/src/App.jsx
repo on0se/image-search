@@ -1,200 +1,10 @@
 import { useState, useRef } from 'react'
-import { Skeleton } from '@chakra-ui/react'
 
-const API_BASE_URL = "http://localhost:8000"
-
-function NormalScreen({topK, setTopK, handleFileUp, handleSearch, handleModal, dbImages}) {
-  return (
-    <div>
-      <UserControlPanel topK={topK} setTopK={setTopK} handleFileUp={handleFileUp} handleSearch={handleSearch}/>
-      <ImageGrid handleModal={handleModal} dbImages={dbImages}/>
-    </div>
-  )
-}
-
-function ResultScreen({handleModal, dbImages, searchResults, queryImage, setScreen}) {
-  return (
-    <div>
-      <CloseButton targetScreen={"normal"} setScreen={setScreen}/>
-      <QueryImageCard Image={queryImage} handleModal={handleModal}/>
-      <ImageGrid searchResults={searchResults} handleModal={handleModal} dbImages={dbImages}/>
-    </div>
-  )
-}
-
-function LoadingScreen() {
-  return (
-    <div>
-      <h1>現在ロード中です</h1>
-    </div>
-  )
-}
-
-function ImageModal({expandImage, nextScreen, setScreen}) {
-  // Modalでは画像をクリックしても拡大しない(ループしてしまう)ため、何もしない関数を渡す
-  return (
-    <div>
-      <CloseButton targetScreen={nextScreen} setScreen={setScreen}/>
-      <ExpandImageCard Image={expandImage}/>
-    </div>
-  )
-}
-
-function UserControlPanel({topK, setTopK, handleFileUp, handleSearch}) {
-  return (
-    <div style={{ 
-      display:"flex",
-      alignItems: "center",
-      gap: 16,
-      justifyContent: "center"
-    }}>
-      <UploadButton handleFileUp={handleFileUp} />
-      <TopKSlider topK={topK} setTopK={setTopK} />
-      <SearchButton handleSearch={handleSearch}/>
-    </div>
-  )
-}
-
-function ImageGrid({searchResults, handleModal, dbImages}) {
-  /*
-    画像を10列でグリッド表示するコンポーネント
-    引数：画像の添え字リスト。渡されないなら全ての添え字が対象(通常画面)、渡されたらその添え字が対象(結果画面)。
-  */
-  // データベースがないときに検索をしても全て表示になる、その対策はあとでしろ。データベースにないなら検索できないとかね
-  // searchResultsが空の時は全ての添え字が対象
-  let keys
-  if (searchResults === undefined) keys = dbImages.map((_, i) => i)
-  else keys = searchResults
-
-  return (
-    <div style={{
-      display: "grid", 
-      gridTemplateColumns: "repeat(10, 1fr)", // 10列を均等に分ける
-      gap: 8
-    }}>
-      {keys.map(key => 
-        <ImageCard key={key} Image={dbImages[key]} handleModal={handleModal}/>
-      )}
-    </div>
-  )
-}
-
-function CloseButton({targetScreen, setScreen}) {
-  return (
-    <button 
-      onClick={() => setScreen(targetScreen)}
-      style={{
-        position: "fixed",
-        top: 10,
-        right: 10,
-      }}
-    > X </button>
-  )
-}
-
-function UploadButton({handleFileUp}) {
-  return (
-    <label style={{
-      padding: "8px 16px",
-      backgroundColor: "#4a90e2",
-      color: "white",
-      borderRadius: "8px",
-      cursor: "pointer",
-    }}>
-      写真をアップロード
-      <input
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleFileUp}
-        style={{ display: "none" }}
-      />
-    </label>
-  )
-
-}
-
-function SearchButton({handleSearch}) {
-  return (
-    <label style={{
-      padding: "8px 16px",
-      backgroundColor: "#4a90e2",
-      color: "white",
-      borderRadius: "8px",
-      cursor: "pointer",
-    }}>
-      検索写真をアップロード
-      <input
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleSearch}
-        style={{ display: "none" }}
-      />
-    </label>
-  )
-}
-
-function TopKSlider({topK, setTopK}) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <span>{topK}</span>
-      <input
-        type="range"
-        min={1}
-        max={20}
-        value={topK}
-        onChange={e => setTopK(e.target.value)}
-      />
-    </div>
-  )
-}
-
-function ImageCard({Image, handleModal}) {
-  const [isLoaded, setIsLoaded] = useState(false) // 画像がロードされたか
-
-  return (
-    <Skeleton isLoaded={isLoaded} width="100%" height="100px">
-      <img 
-        src={Image}
-        onLoad={() => setIsLoaded(true)}
-        onClick={() => handleModal(Image)}
-        style={{
-          width: "100%",
-          height: "100px",
-          objectFit: "cover",
-        }}
-      />
-    </Skeleton>
-  )
-}
-
-function ExpandImageCard({Image}) {
-  return (
-    <img 
-      src={Image}
-      style={{
-        width: "50vw",
-        height: "50vw",
-        objectFit: "contain",
-      }}
-    />
-  )
-}
-
-function QueryImageCard({Image, handleModal}) {
-  return (
-    <img 
-      src={Image}
-      onClick={() => handleModal(Image)}
-      style={{
-        width: "100px",
-        height: "100px",
-        objectFit: "cover",
-      }}
-    />
-  )
-}
+import { uploadImages, searchImage } from './api'
+import NormalScreen from './screens/NormalScreen'
+import ResultScreen from './screens/ResultScreen'
+import LoadingScreen from './screens/LoadingScreen'
+import ImageModal from './screens/ImageModal'
 
 export default function App() {
   const [dbImages, setDbImages] = useState([]) // uploadした写真
@@ -218,12 +28,7 @@ export default function App() {
     setScreen("loading")
 
     // 画像データベース、画像ベクトルリスト、faissインデックス、名前setの更新
-    const formData = new FormData()
-    newFiles.forEach(file => formData.append("files", file))
-    await fetch(`${API_BASE_URL}/upload`, {
-      method: "POST",
-      body: formData
-    })
+    await uploadImages(newFiles)
     setDbImages(prev => [...prev, ...newUrls])
     newFiles.forEach(file => dbImageNames.current.add(file.name))
 
@@ -242,12 +47,7 @@ export default function App() {
     setScreen("loading")
 
     // クエリ画像の更新、検索、検索結果の更新
-    const formData = new FormData()
-    formData.append("file", file)
-    const response = await fetch(`${API_BASE_URL}/search?topK=${topK}`, {
-      method: "POST",
-      body: formData
-    })
+    const response = await searchImage(file, topK)
     const data = await response.json()
     setQueryImage(newUrl)
     setSearchResults(data.results)
