@@ -2,45 +2,9 @@ from fastapi import FastAPI, UploadFile, File, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from typing import List
-from PIL import Image
-import io
-import abc
 
-from vectorizer import vectorize_image
-from searcher import add_index, faiss_search
-
-# データベース(抽象的)
-class ImageRepository(abc.ABC):
-    @abc.abstractmethod
-    def add(self, vector) -> None:
-        """ベクトルを1つ追加"""
-        pass
-    
-    @abc.abstractmethod
-    def search(self, query_vector, topk) -> list:
-        """クエリベクトルに近い画像をtopk件検索し、添え字リストを返す"""
-        pass
-
-    @abc.abstractmethod
-    def count(self) -> int:
-        """登録済みの画像数を返す"""
-        pass
-
-# メモリで管理するデータベース
-class InMemoryImageRepository(ImageRepository):
-    def __init__(self):
-        self.index = None # faissインデックス
-    
-    def add(self, vector) -> None:
-        self.index = add_index(vector.reshape(1, -1), self.index)
-    
-    def search(self, query_vector, topk) -> list:
-        return faiss_search(self.index, query_vector, topk)
-
-    def count(self) -> int:
-        if self.index is None:
-            return 0
-        return self.index.ntotal
+from vectorizer import vectorize_bytes
+from repository import ImageRepository, InMemoryImageRepository
 
 # サーバー起動時にRepositoryを作り、appに紐づける
 @asynccontextmanager
@@ -75,7 +39,7 @@ async def upload(
 
     for file in files:
         content = await file.read()
-        vector = vectorize_image(Image.open(io.BytesIO(content)).convert("RGB"))
+        vector = vectorize_bytes(content)
         repo.add(vector)
         add_count += 1
     
@@ -95,6 +59,6 @@ async def search(
     """
     topK = min(topK, repo.count())
     content = await file.read()
-    vector = vectorize_image(Image.open(io.BytesIO(content)).convert("RGB"))
+    vector = vectorize_bytes(content)
     results = repo.search(vector, topK)
     return {"results": results}

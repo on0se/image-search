@@ -1,7 +1,8 @@
 import torch
 import numpy as np
 from PIL import Image
-from utils import trans_to_dinov2
+import io
+from preprocess import trans_to_dinov2
 
 # DINOv2モデルをロード
 model = torch.hub.load("facebookresearch/dinov2", "dinov2_vitb14")
@@ -22,3 +23,11 @@ def vectorize_image(img):
 
     # numpy配列に変換して返す
     return vector.squeeze(0).numpy().astype("float32")
+
+def vectorize_bytes(content):
+    """
+    バイト列で受け取った画像をベクトルに変換する
+    引数:bytes
+    返り値は shape (768,) のnumpy配列
+    """
+    return vectorize_image(Image.open(io.BytesIO(content)).convert("RGB"))

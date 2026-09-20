@@ -6,7 +6,7 @@ def pad_to_square(img):
     """
     黒で埋めて画像を正方形にする
     引数:Imageクラス
-    別の策：拡大して中心切り出しでもいいかもしれない
+    パディングを選んだ理由は docs/design.md §2 を参照
     """
     w, h = img.size
     max_siz = max(w, h)
